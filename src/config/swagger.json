@@ -1,0 +1,131 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Seladaku IoT API Documentation",
+    "version": "1.1.0",
+    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku (Revisi: Class-Based & Minimalist Register)"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  },
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Registrasi user baru",
+        "description": "Hanya membutuhkan Nama, Email, dan Password di awal pendaftaran.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nama", "email", "password"],
+                "properties": {
+                  "nama": { "type": "string", "example": "Tunggul Majid" },
+                  "email": {
+                    "type": "string",
+                    "example": "tunggul@unej.ac.id"
+                  },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Berhasil registrasi" },
+          "400": { "description": "Input tidak lengkap atau email sudah ada" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login user",
+        "description": "Mengembalikan Access Token (15m) dan Refresh Token (7d).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "example": "tunggul@unej.ac.id"
+                  },
+                  "password": { "type": "string", "example": "password123" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login Berhasil" },
+          "401": { "description": "Kredensial salah" }
+        }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "summary": "Ambil profil user yang sedang login",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Data Profil Berhasil Diambil" },
+          "401": { "description": "Token tidak ada atau tidak valid" }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh Access Token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "description": "Masukkan Refresh Token"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Access Token baru berhasil dibuat" },
+          "403": { "description": "Token tidak valid atau kadaluwarsa" }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "delete": {
+        "tags": ["Auth"],
+        "summary": "Logout user",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": { "description": "Logout Berhasil" }
+        }
+      }
+    }
+  }
+}
