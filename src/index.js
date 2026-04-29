@@ -10,7 +10,13 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(helmet()); // Keamanan header HTTP
-app.use(cors()); // Izin akses lintas asal (penting untuk Flutter)
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+); // Izin akses lintas asal (penting untuk Flutter)
 app.use(morgan("dev")); // Logger untuk melihat request yang masuk ke terminal
 app.use(express.json()); // Parsing body JSON
 app.use(express.urlencoded({ extended: true }));

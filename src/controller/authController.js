@@ -6,12 +6,12 @@ class AuthController {
   // Helper internal untuk membuat token
   static #generateTokens(id_user) {
     const accessToken = jwt.sign(
-      { id: id_user },
+      { id_user: id_user },
       process.env.JWT_ACCESS_SECRET,
       { expiresIn: "15m" },
     );
     const refreshToken = jwt.sign(
-      { id: id_user },
+      { id_user: id_user },
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: "7d" },
     );
@@ -23,12 +23,10 @@ class AuthController {
     const { nama, email, password } = req.body;
 
     if (!nama || !email || !password) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Nama, email, dan password wajib diisi",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Nama, email, dan password wajib diisi",
+      });
     }
 
     const existingUser = await User.findByEmail(email);
@@ -75,7 +73,7 @@ class AuthController {
       message: "Login berhasil",
       accessToken,
       refreshToken,
-      user: { id: user.id_user, nama: user.nama, email: user.email },
+      data: { id_user: user.id_user, nama: user.nama, email: user.email },
     });
   }
 
