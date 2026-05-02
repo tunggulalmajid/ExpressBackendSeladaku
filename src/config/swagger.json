@@ -2,8 +2,8 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Seladaku IoT API Documentation",
-    "version": "1.1.0",
-    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku (Revisi: Class-Based & Minimalist Register)"
+    "version": "1.2.0",
+    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi foto profil, koordinat GPS untuk cuaca, dan ID Telegram untuk notifikasi IoT."
   },
   "servers": [
     {
@@ -18,6 +18,36 @@
         "scheme": "bearer",
         "bearerFormat": "JWT"
       }
+    },
+    "schemas": {
+      "User": {
+        "type": "object",
+        "properties": {
+          "id_user": { "type": "integer", "example": 1 },
+          "nama": { "type": "string", "example": "Tunggul Majid" },
+          "email": { "type": "string", "example": "tunggul@unej.ac.id" },
+          "nomor_telepon": { "type": "string", "example": "08123456789" },
+          "alamat": {
+            "type": "string",
+            "example": "Jl. Kalimantan No. 37, Jember"
+          },
+          "id_telegram": { "type": "string", "example": "123456789" },
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "example": -8.1724
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "example": 113.7005
+          },
+          "foto": {
+            "type": "string",
+            "example": "https://res.cloudinary.com/seladaku/image/upload/v123/profile.jpg"
+          }
+        }
+      }
     }
   },
   "paths": {
@@ -25,7 +55,6 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Registrasi user baru",
-        "description": "Hanya membutuhkan Nama, Email, dan Password di awal pendaftaran.",
         "requestBody": {
           "required": true,
           "content": {
@@ -46,8 +75,7 @@
           }
         },
         "responses": {
-          "201": { "description": "Berhasil registrasi" },
-          "400": { "description": "Input tidak lengkap atau email sudah ada" }
+          "201": { "description": "Berhasil registrasi" }
         }
       }
     },
@@ -55,7 +83,6 @@
       "post": {
         "tags": ["Auth"],
         "summary": "Login user",
-        "description": "Mengembalikan Access Token (15m) dan Refresh Token (7d).",
         "requestBody": {
           "required": true,
           "content": {
@@ -75,19 +102,69 @@
           }
         },
         "responses": {
-          "200": { "description": "Login Berhasil" },
-          "401": { "description": "Kredensial salah" }
+          "200": {
+            "description": "Login Berhasil (Mengembalikan accessToken & refreshToken)"
+          }
+        }
+      }
+    },
+    "/api/auth/update-profile": {
+      "put": {
+        "tags": ["Auth"],
+        "summary": "Update data profil, foto, & koordinat kebun",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama": { "type": "string" },
+                  "email": { "type": "string" },
+                  "nomorTelepon": { "type": "string" },
+                  "alamat": { "type": "string" },
+                  "idTelegram": {
+                    "type": "string",
+                    "description": "ID numerik bot Telegram"
+                  },
+                  "lat": { "type": "number", "format": "float" },
+                  "lon": { "type": "number", "format": "float" },
+                  "foto": {
+                    "type": "string",
+                    "format": "binary"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profil Berhasil Diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "message": { "type": "string" },
+                    "data": { "$ref": "#/components/schemas/User" }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
     "/api/auth/me": {
       "get": {
         "tags": ["Auth"],
-        "summary": "Ambil profil user yang sedang login",
+        "summary": "Ambil profil user login",
         "security": [{ "bearerAuth": [] }],
         "responses": {
-          "200": { "description": "Data Profil Berhasil Diambil" },
-          "401": { "description": "Token tidak ada atau tidak valid" }
+          "200": { "description": "Data Profil Berhasil Diambil" }
         }
       }
     },
@@ -102,18 +179,14 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "token": {
-                    "type": "string",
-                    "description": "Masukkan Refresh Token"
-                  }
+                  "token": { "type": "string", "description": "Refresh Token" }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Access Token baru berhasil dibuat" },
-          "403": { "description": "Token tidak valid atau kadaluwarsa" }
+          "200": { "description": "Access Token baru berhasil dibuat" }
         }
       }
     },

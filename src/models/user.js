@@ -25,6 +25,45 @@ const User = {
     return result.insertId;
   },
 
+  update: async (id, data) => {
+    const {
+      nama,
+      email,
+      nomor_telepon,
+      alamat,
+      foto,
+      id_telegram,
+      latitude,
+      longitude,
+    } = data;
+    console.log(data);
+    const query = `
+        UPDATE user SET 
+        nama = ?, 
+        email = ?, 
+        nomor_telepon = ?, 
+        alamat = ?, 
+        foto = ?, 
+        id_telegram = ?, 
+        latitude = ?, 
+        longitude = ? 
+        WHERE id_user = ?`;
+
+    const values = [
+      nama,
+      email,
+      nomor_telepon,
+      alamat,
+      foto,
+      id_telegram,
+      latitude,
+      longitude,
+      id,
+    ];
+    const [result] = await db.execute(query, values);
+    return result.affectedRows > 0;
+  },
+
   updateRefreshToken: async (id_user, token) => {
     await db.query("UPDATE user SET refresh_token = ? WHERE id_user = ?", [
       token,

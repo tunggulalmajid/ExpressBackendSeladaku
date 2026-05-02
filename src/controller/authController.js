@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { cloudinary } = require("../config/cloudinary");
 
 class AuthController {
   // Helper internal untuk membuat token
@@ -86,6 +87,56 @@ class AuthController {
         .json({ success: false, message: "User tidak ditemukan" });
     }
     res.json({ success: true, data: user });
+  }
+
+  static async updateProfile(req, res) {
+    try {
+      const userId = req.user.id_user;
+      console.log(req.body);
+      const { nama, email, nomorTelepon, alamat, idTelegram, lat, lon } =
+        req.body;
+
+      // 1. Cari data user lama
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User tidak ditemukan" });
+      }
+
+      let updateData = {
+        nama: nama || user.nama,
+        email: email || user.email,
+        nomor_telepon: nomorTelepon || user.nomor_telepon,
+        alamat: alamat || user.alamat,
+        id_telegram: idTelegram || user.id_telegram,
+        latitude: lat || user.latitude,
+        longitude: lon || user.longitude,
+        foto: user.foto, // Default pakai foto lama
+      };
+
+      // 2. Jika ada file foto baru yang diupload
+      if (req.file) {
+        // Upload ke Cloudinary
+        const result = await cloudinary.uploader.upload(req.file.path, {
+          folder: "seladaku_profiles",
+          use_filename: true,
+        });
+        updateData.foto = result.secure_url;
+      }
+      console.log(updateData);
+      // 3. Eksekusi Update ke Database
+      const success = await User.update(userId, updateData);
+
+      if (success) {
+        return res.status(200).json({
+          status: "success",
+          message: "Profil Seladaku berhasil diperbarui",
+          data: updateData,
+        });
+      }
+    } catch (error) {
+      console.error("Error updateProfile:", error);
+      return res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 
   // 4. Refresh Token
