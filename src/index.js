@@ -22,6 +22,7 @@ app.use(express.json()); // Parsing body JSON
 app.use(express.urlencoded({ extended: true }));
 
 const authRoutes = require("./routes/authRoutes");
+const areaRoutes = require("./routes/areaRoutes");
 
 app.get("/", (req, res) => {
   res.json({
@@ -32,6 +33,7 @@ app.get("/", (req, res) => {
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api/auth", authRoutes);
+app.use("/api/area", areaRoutes);
 
 app.use((err, req, res, next) => {
   console.error(`[Error]: ${err.message}`);

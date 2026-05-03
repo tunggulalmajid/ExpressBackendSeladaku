@@ -3,7 +3,7 @@
   "info": {
     "title": "Seladaku IoT API Documentation",
     "version": "1.2.0",
-    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi foto profil, koordinat GPS untuk cuaca, dan ID Telegram untuk notifikasi IoT."
+    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, dan koordinat GPS."
   },
   "servers": [
     {
@@ -44,8 +44,18 @@
           },
           "foto": {
             "type": "string",
-            "example": "https://res.cloudinary.com/seladaku/image/upload/v123/profile.jpg"
+            "example": "https://res.cloudinary.com/..."
           }
+        }
+      },
+      "Area": {
+        "type": "object",
+        "properties": {
+          "id_area": { "type": "integer", "example": 10 },
+          "nama": { "type": "string", "example": "Kebun Depan" },
+          "status": { "type": "boolean", "example": true },
+          "total_tandon": { "type": "integer", "example": 0 },
+          "created_at": { "type": "string", "format": "date-time" }
         }
       }
     }
@@ -74,9 +84,7 @@
             }
           }
         },
-        "responses": {
-          "201": { "description": "Berhasil registrasi" }
-        }
+        "responses": { "201": { "description": "Berhasil registrasi" } }
       }
     },
     "/api/auth/login": {
@@ -101,17 +109,13 @@
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Login Berhasil (Mengembalikan accessToken & refreshToken)"
-          }
-        }
+        "responses": { "200": { "description": "Login Berhasil" } }
       }
     },
     "/api/auth/update-profile": {
       "put": {
         "tags": ["Auth"],
-        "summary": "Update data profil, foto, & koordinat kebun",
+        "summary": "Update data profil & foto",
         "security": [{ "bearerAuth": [] }],
         "requestBody": {
           "required": true,
@@ -124,38 +128,16 @@
                   "email": { "type": "string" },
                   "nomorTelepon": { "type": "string" },
                   "alamat": { "type": "string" },
-                  "idTelegram": {
-                    "type": "string",
-                    "description": "ID numerik bot Telegram"
-                  },
+                  "idTelegram": { "type": "string" },
                   "lat": { "type": "number", "format": "float" },
                   "lon": { "type": "number", "format": "float" },
-                  "foto": {
-                    "type": "string",
-                    "format": "binary"
-                  }
+                  "foto": { "type": "string", "format": "binary" }
                 }
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "Profil Berhasil Diperbarui",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "success": { "type": "boolean" },
-                    "message": { "type": "string" },
-                    "data": { "$ref": "#/components/schemas/User" }
-                  }
-                }
-              }
-            }
-          }
-        }
+        "responses": { "200": { "description": "Profil Berhasil Diperbarui" } }
       }
     },
     "/api/auth/me": {
@@ -163,9 +145,7 @@
         "tags": ["Auth"],
         "summary": "Ambil profil user login",
         "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": { "description": "Data Profil Berhasil Diambil" }
-        }
+        "responses": { "200": { "description": "Success" } }
       }
     },
     "/api/auth/refresh": {
@@ -173,21 +153,15 @@
         "tags": ["Auth"],
         "summary": "Refresh Access Token",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "token": { "type": "string", "description": "Refresh Token" }
-                }
+                "properties": { "token": { "type": "string" } }
               }
             }
           }
         },
-        "responses": {
-          "200": { "description": "Access Token baru berhasil dibuat" }
-        }
+        "responses": { "200": { "description": "Token baru berhasil dibuat" } }
       }
     },
     "/api/auth/logout": {
@@ -195,9 +169,99 @@
         "tags": ["Auth"],
         "summary": "Logout user",
         "security": [{ "bearerAuth": [] }],
+        "responses": { "200": { "description": "Logout Berhasil" } }
+      }
+    },
+    "/api/area": {
+      "get": {
+        "tags": ["Area"],
+        "summary": "Ambil semua area milik user (Halaman Kebunku)",
+        "security": [{ "bearerAuth": [] }],
         "responses": {
-          "200": { "description": "Logout Berhasil" }
+          "200": {
+            "description": "Daftar area berhasil diambil",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Area" }
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
+      },
+      "post": {
+        "tags": ["Area"],
+        "summary": "Tambah area/kebun baru",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nama"],
+                "properties": {
+                  "nama": { "type": "string", "example": "Kebun Samping" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Area Berhasil Dibuat" } }
+      }
+    },
+    "/api/area/{id_area}": {
+      "put": {
+        "tags": ["Area"],
+        "summary": "Update data area (Nama/Status)",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id_area",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama": {
+                    "type": "string",
+                    "example": "Kebun Depan Updated"
+                  },
+                  "status": { "type": "boolean", "example": false }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Berhasil Update" } }
+      },
+      "delete": {
+        "tags": ["Area"],
+        "summary": "Hapus area",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id_area",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": { "200": { "description": "Berhasil Hapus" } }
       }
     }
   }

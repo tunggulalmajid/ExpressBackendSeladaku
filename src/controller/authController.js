@@ -149,7 +149,7 @@ class AuthController {
     }
 
     const userData = await User.findByRefreshToken(token);
-    console.log(userData + "INI USERDATA");
+    console.log(`${userData}` + "INI USERDATA");
     if (!userData) {
       return res
         .status(403)
