@@ -43,7 +43,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`==========================================`);
   console.log(`Server Zurian aktif di port: ${PORT}`);
   console.log(`Mode: ${process.env.NODE_ENV || "development"}`);

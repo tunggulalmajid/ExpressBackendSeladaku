@@ -9,12 +9,12 @@ class AuthController {
     const accessToken = jwt.sign(
       { id_user: id_user },
       process.env.JWT_ACCESS_SECRET,
-      { expiresIn: "15m" },
+      { expiresIn: "30m" },
     );
     const refreshToken = jwt.sign(
       { id_user: id_user },
       process.env.JWT_REFRESH_SECRET,
-      { expiresIn: "7d" },
+      { expiresIn: "30d" },
     );
     return { accessToken, refreshToken };
   }
@@ -149,6 +149,7 @@ class AuthController {
     }
 
     const userData = await User.findByRefreshToken(token);
+    console.log(userData + "INI USERDATA");
     if (!userData) {
       return res
         .status(403)
@@ -158,9 +159,9 @@ class AuthController {
     try {
       const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
       const accessToken = jwt.sign(
-        { id: decoded.id },
+        { id_user: decoded.id_user },
         process.env.JWT_ACCESS_SECRET,
-        { expiresIn: "15m" },
+        { expiresIn: "30m" },
       );
       res.json({ success: true, accessToken });
     } catch (err) {

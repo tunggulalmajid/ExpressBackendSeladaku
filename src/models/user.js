@@ -10,7 +10,7 @@ const User = {
 
   findById: async (id_user) => {
     const [rows] = await db.query(
-      "SELECT id_user, nama, email, id_telegram, nomor_telepon, alamat, foto, created_at FROM user WHERE id_user = ?",
+      "SELECT id_user, nama, email, id_telegram,latitude, longitude, nomor_telepon, alamat, foto, created_at FROM user WHERE id_user = ?",
       [id_user],
     );
     return rows[0];
