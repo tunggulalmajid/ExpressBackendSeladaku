@@ -55,6 +55,7 @@ class AreaController {
 
       res.json({ success: true, message: "Data area berhasil diperbarui" });
     } catch (error) {
+      console.log("error Update : " + error);
       res.status(500).json({ success: false, message: error.message });
     }
   }

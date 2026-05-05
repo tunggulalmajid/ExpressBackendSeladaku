@@ -2,8 +2,8 @@
   "openapi": "3.0.0",
   "info": {
     "title": "Seladaku IoT API Documentation",
-    "version": "1.2.0",
-    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, dan koordinat GPS."
+    "version": "1.3.0",
+    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, koordinat GPS, dan kontrol tandon modular."
   },
   "servers": [
     {
@@ -54,8 +54,45 @@
           "id_area": { "type": "integer", "example": 10 },
           "nama": { "type": "string", "example": "Kebun Depan" },
           "status": { "type": "boolean", "example": true },
-          "total_tandon": { "type": "integer", "example": 0 },
+          "total_tandon": { "type": "integer", "example": 2 },
           "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Tandon": {
+        "type": "object",
+        "properties": {
+          "id_tandon": { "type": "integer", "example": 5 },
+          "nama_tandon": { "type": "string", "example": "Tunggul" },
+          "tanggal_tanam": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-05-03T17:00:00.000Z"
+          },
+          "id_area": { "type": "integer", "example": 26 },
+          "device_id": { "type": "string", "example": "D1" },
+          "tinggi_tandon": { "type": "integer", "example": 50 },
+          "jarak_aman": { "type": "integer", "example": 20 },
+          "mode_otomatis": { "type": "integer", "example": 0 },
+          "is_notif_aktif": { "type": "integer", "example": 0 },
+          "status_s1": { "type": "string", "example": "OFF" },
+          "status_s2": { "type": "string", "example": "OFF" },
+          "status_pompa": { "type": "string", "example": "OFF" },
+          "min_ph": { "type": "number", "example": 5.5 },
+          "max_ph": { "type": "number", "example": 8.5 },
+          "min_ppm": { "type": "integer", "example": 450 },
+          "max_ppm": { "type": "integer", "example": 850 },
+          "min_volume": { "type": "number", "example": 0.3 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "update_at": { "type": "string", "format": "date-time" },
+          "last_seen": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "ph": { "type": "number", "nullable": true },
+          "ppm": { "type": "number", "nullable": true },
+          "volume_air": { "type": "number", "nullable": true },
+          "is_hujan": { "type": "integer", "nullable": true }
         }
       }
     }
@@ -256,6 +293,124 @@
         "parameters": [
           {
             "name": "id_area",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": { "200": { "description": "Berhasil Hapus" } }
+      }
+    },
+    "/api/tandon": {
+      "post": {
+        "tags": ["Tandon"],
+        "summary": "Tambah tandon baru",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["nama_tandon", "id_area", "device_id"],
+                "properties": {
+                  "nama_tandon": { "type": "string" },
+                  "tanggal_tanam": { "type": "string", "format": "date" },
+                  "id_area": { "type": "integer" },
+                  "device_id": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "201": { "description": "Tandon Berhasil Dibuat" } }
+      }
+    },
+    "/api/tandon/area/{id_area}": {
+      "get": {
+        "tags": ["Tandon"],
+        "summary": "Daftar tandon per area (Dashboard)",
+        "description": "Menampilkan data tandon beserta log sensor paling baru.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id_area",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Tandon" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tandon/{id}": {
+      "get": {
+        "tags": ["Tandon"],
+        "summary": "Detail satu tandon",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": { "200": { "description": "Success" } }
+      },
+      "patch": {
+        "tags": ["Tandon"],
+        "summary": "Update Modular (PATCH)",
+        "description": "Update partial untuk toggle hardware atau parameter nutrisi.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama_tandon": { "type": "string" },
+                  "status_pompa": {
+                    "type": "string",
+                    "enum": ["hidup", "mati"]
+                  },
+                  "mode_otomatis": { "type": "boolean" },
+                  "min_ph": { "type": "number" },
+                  "max_ph": { "type": "number" }
+                }
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "Update Berhasil" } }
+      },
+      "delete": {
+        "tags": ["Tandon"],
+        "summary": "Hapus tandon",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
             "in": "path",
             "required": true,
             "schema": { "type": "integer" }

@@ -23,17 +23,21 @@ app.use(express.urlencoded({ extended: true }));
 
 const authRoutes = require("./routes/authRoutes");
 const areaRoutes = require("./routes/areaRoutes");
+const tandonRoutes = require("./routes/tandonRoutes");
 
 app.get("/", (req, res) => {
   res.json({
     message: "Welcome to Zurian Hidroponik API 🚀",
     status: "Server is running smoothly",
+    path: "/",
+    Docs: "/api-docs",
   });
 });
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api/auth", authRoutes);
 app.use("/api/area", areaRoutes);
+app.use("/api/tandon", tandonRoutes);
 
 app.use((err, req, res, next) => {
   console.error(`[Error]: ${err.message}`);
@@ -50,5 +54,6 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`Server Zurian aktif di port: ${PORT}`);
   console.log(`Mode: ${process.env.NODE_ENV || "development"}`);
   console.log(`URL: http://localhost:${PORT}`);
+  console.log(`Documentation: http://localhost:${PORT}/api-docs`);
   console.log(`==========================================`);
 });
