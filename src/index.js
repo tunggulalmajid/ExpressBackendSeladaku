@@ -1,10 +1,13 @@
 const express = require("express");
 const cors = require("cors");
+const http = require("http");
 const helmet = require("helmet");
 const morgan = require("morgan");
 require("dotenv").config();
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./config/swagger.json");
+const { Server } = require("socket.io");
+const setupMqtt = require("./services/mqttService");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,7 +23,15 @@ app.use(
 app.use(morgan("dev")); // Logger untuk melihat request yang masuk ke terminal
 app.use(express.json()); // Parsing body JSON
 app.use(express.urlencoded({ extended: true }));
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  }, // Izinkan koneksi dari aplikasi Flutter
+});
 
+setupMqtt(io);
 const authRoutes = require("./routes/authRoutes");
 const areaRoutes = require("./routes/areaRoutes");
 const tandonRoutes = require("./routes/tandonRoutes");
@@ -49,7 +60,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, "0.0.0.0", () => {
+server.listen(PORT, "0.0.0.0", () => {
   console.log(`==========================================`);
   console.log(`Server Zurian aktif di port: ${PORT}`);
   console.log(`Mode: ${process.env.NODE_ENV || "development"}`);

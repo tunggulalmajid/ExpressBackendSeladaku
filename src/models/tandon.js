@@ -35,6 +35,13 @@ const Tandon = {
     return rows;
   },
 
+  getTandonByDevice: async (device_id) => {
+    const query = `
+      SELECT id_tandon,tinggi_tandon, jarak_aman, min_volume, mode_otomatis from tandon where device_id = ?`;
+    const [rows] = await db.query(query, [device_id]);
+    return rows;
+  },
+
   // Mengambil detail lengkap satu tandon (untuk halaman pengaturan)
   getDetailTandon: async (id_tandon) => {
     const query = `
@@ -55,9 +62,42 @@ const Tandon = {
 
   // Update fleksibel (PATCH) - Sudah oke!
   update: async (id_tandon, data) => {
-    const query = `UPDATE tandon SET ?, update_at = NOW() WHERE id_tandon = ?`;
-    const [result] = await db.query(query, [data, id_tandon]);
-    return result.affectedRows > 0;
+    try {
+      const query = `UPDATE tandon SET ?, update_at = NOW() WHERE id_tandon = ?`;
+      const [result] = await db.query(query, [data, id_tandon]);
+      return result.affectedRows > 0;
+    } catch (error) {
+      console.log(error);
+    }
+  },
+
+  pairDevice: async (id_tandon, device_id) => {
+    try {
+      // 1. Validasi: Apakah device_id ada di tabel resmi 'device'?
+      const checkDeviceQuery = `SELECT device_id FROM device WHERE device_id = ?`;
+      const [deviceRows] = await db.query(checkDeviceQuery, [device_id]);
+
+      if (deviceRows.length === 0) {
+        throw new Error("Device tidak terdaftar dalam sistem!");
+      }
+
+      // 2. Update Tandon Spesifik
+      // Kita targetkan berdasarkan id_tandon untuk memastikan tidak salah sasaran
+      const updateQuery = `UPDATE tandon SET device_id = ? WHERE id_tandon = ?`;
+      const [result] = await db.query(updateQuery, [device_id, id_tandon]);
+
+      if (result.affectedRows === 0) {
+        throw new Error("Gagal memasangkan perangkat. Tandon tidak ditemukan.");
+      }
+
+      return true;
+    } catch (error) {
+      // Menangani error UNIQUE constraint dari MySQL
+      if (error.code === "ER_DUP_ENTRY") {
+        throw new Error("Device ini sudah digunakan oleh tandon lain!");
+      }
+      throw error;
+    }
   },
 
   // Menghapus tandon
@@ -66,6 +106,6 @@ const Tandon = {
     const [result] = await db.query(query, [id_tandon]);
     return result.affectedRows > 0;
   },
-};
+};  
 
 module.exports = Tandon;

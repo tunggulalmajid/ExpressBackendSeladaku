@@ -63,7 +63,6 @@ class AuthController {
         .status(401)
         .json({ success: false, message: "Email atau password salah" });
     }
-
     const { accessToken, refreshToken } = AuthController.#generateTokens(
       user.id_user,
     );

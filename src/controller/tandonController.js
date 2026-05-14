@@ -76,6 +76,26 @@ const tandonController = {
     }
   },
 
+  pairDevice: async (req, res) => {
+    const { id } = req.params;
+    const { device_id } = req.body;
+
+    try {
+      const success = await Tandon.pairDevice(id,device_id);
+      if (success) {
+        return res.status(200).json({
+          success: true,
+          message: "Perangkat berhasil diverifikasi dan dipasangkan!",
+        });
+      }
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  },
+
   // 5. Hapus Tandon (Otomatis Cascade Riwayat karena setting DB kamu)
   destroy: async (req, res) => {
     try {

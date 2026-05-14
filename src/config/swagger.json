@@ -326,6 +326,77 @@
         "responses": { "201": { "description": "Tandon Berhasil Dibuat" } }
       }
     },
+    "/api/tandon/pair-device/{id}": {
+      "post": {
+        "tags": ["Tandon"],
+        "summary": "Pairing hardware ke tandon spesifik",
+        "description": "Menghubungkan device_id (dari hardware ESP32/ESP8266) ke id_tandon tertentu. Memvalidasi apakah device_id terdaftar di tabel device resmi.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID Tandon yang akan dipasangkan perangkat",
+            "required": true,
+            "schema": { "type": "integer", "example": 5 }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["device_id"],
+                "properties": {
+                  "device_id": {
+                    "type": "string",
+                    "example": "D1",
+                    "description": "ID unik dari hardware (bisa didapat dari scan QR)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perangkat berhasil dipasangkan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Perangkat berhasil dipasangkan ke tandon ini!"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error validasi (Device tidak terdaftar atau sudah digunakan)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": false },
+                    "message": {
+                      "type": "string",
+                      "example": "Hardware ini sudah digunakan oleh tandon lain!"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/tandon/area/{id_area}": {
       "get": {
         "tags": ["Tandon"],
