@@ -18,7 +18,10 @@ const setupMqtt = (io) => {
   client.on("message", async (topic, message) => {
     try {
       const payload = JSON.parse(message.toString());
-      const { device_id, ph, ppm, jarak, is_hujan } = payload;
+      const { device_id, ph, ppm, volume_air, is_hujan } = payload;
+      console.log(
+        `device id : ${device_id}, ph : ${ph}, ppm : ${ppm}, volume_air : ${volume_air}, is hujan : ${is_hujan}`,
+      );
 
       const tandonRows = await Tandon.getTandonByDevice(device_id);
       if (tandonRows.length > 0) {
@@ -26,9 +29,13 @@ const setupMqtt = (io) => {
 
         // 1. Hitung Volume Air
         const rangeEfektif = tinggi_tandon - jarak_aman;
-        const jarakAirSekarang = tinggi_tandon - jarak;
+        console.log("range efektif:", rangeEfektif.toString());
+        const jarakAirSekarang = tinggi_tandon - volume_air;
+        console.log("Jarak Air:", jarakAirSekarang.toString());
         let volumePersen = Math.round((jarakAirSekarang / rangeEfektif) * 100);
+        console.log("volume in persen 1 :", volumePersen.toString());
         volumePersen = Math.max(0, Math.min(100, volumePersen));
+        console.log("volume in persen 2 :", volumePersen.toString());
 
         // 2. Data Khusus Tabel riwayat_data (Sesuai kolom di image_92a07b.jpg)
         const dataRiwayat = {
