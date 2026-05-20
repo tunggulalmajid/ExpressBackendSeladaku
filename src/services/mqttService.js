@@ -33,9 +33,7 @@ const setupMqtt = (io) => {
         const jarakAirSekarang = tinggi_tandon - volume_air;
         console.log("Jarak Air:", jarakAirSekarang.toString());
         let volumePersen = Math.round((jarakAirSekarang / rangeEfektif) * 100);
-        console.log("volume in persen 1 :", volumePersen.toString());
         volumePersen = Math.max(0, Math.min(100, volumePersen));
-        console.log("volume in persen 2 :", volumePersen.toString());
 
         // 2. Data Khusus Tabel riwayat_data (Sesuai kolom di image_92a07b.jpg)
         const dataRiwayat = {
