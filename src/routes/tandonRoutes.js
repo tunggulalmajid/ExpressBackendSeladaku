@@ -3,11 +3,6 @@ const router = express.Router();
 const verifyToken = require("../middleware/authMiddleware");
 const tandonController = require("../controller/tandonController");
 
-/**
- * Endpoint untuk Manajemen Tandon
- * Base URL: /api/tandon (asumsi di app.js)
- */
-
 router.post("/", verifyToken, tandonController.store);
 
 router.get("/area/:id_area", verifyToken, tandonController.index);

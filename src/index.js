@@ -35,11 +35,12 @@ setupMqtt(io);
 const authRoutes = require("./routes/authRoutes");
 const areaRoutes = require("./routes/areaRoutes");
 const tandonRoutes = require("./routes/tandonRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 app.get("/", (req, res) => {
   res.json({
     message: "Welcome to Zurian Hidroponik API 🚀",
-    status: "Server is running smoothly",
+    status: "Server Running",
     path: "/",
     Docs: "/api-docs",
   });
@@ -49,6 +50,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api/auth", authRoutes);
 app.use("/api/area", areaRoutes);
 app.use("/api/tandon", tandonRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.use((err, req, res, next) => {
   console.error(`[Error]: ${err.message}`);
