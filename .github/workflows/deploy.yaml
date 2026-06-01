@@ -3,14 +3,25 @@ name: Deploy to VPS via GitHub Actions
 on:
   push:
     branches:
-      - main # Menjalankan deploy otomatis setiap kali Anda push ke branch main
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Repository Kode
         uses: actions/checkout@v4
+
+      - name: Transfer File Proyek ke VPS (SCP)
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: "./*"
+          target: "~/projects/backend-seladaku"
 
       - name: Eksekusi Perintah di VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -20,7 +31,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.VPS_PORT }}
           script: |
-            # 1. Masuk ke direktori proyek yang sudah disiapkan di VPS
+            # 1. Masuk ke direktori proyek di VPS
             cd ~/projects/backend-seladaku
             
             # 2. Membuat file .env fisik di VPS dari rahasia ENV_FILE di GitHub Secrets
