@@ -3,7 +3,7 @@ const db = require("../config/dbConf");
 const Dashboard = {
   getSummaryArea: async (id_user) => {
     const query = `
-        WITH AreaTerbatas AS (
+      WITH AreaTerbatas AS (
             SELECT a.id_area, a.nama, a.status 
             FROM area a
             JOIN tandon t USING (id_area)
@@ -18,6 +18,16 @@ const Dashboard = {
                 ROW_NUMBER() OVER (PARTITION BY t.id_area ORDER BY t.device_id DESC, t.id_tandon) as nomor_urut
             FROM tandon t
             WHERE t.id_area IN (SELECT id_area FROM AreaTerbatas)
+        ),
+        -- Langkah Tambahan: Tarik data log sensor terbaru untuk setiap tandon
+        LogSensorTerbaru AS (
+            SELECT r.id_tandon, r.ph, r.ppm, r.volume_air, r.is_hujan
+            FROM riwayat_data r
+            WHERE r.id_riwayat_data IN (
+                SELECT MAX(id_riwayat_data) 
+                FROM riwayat_data 
+                GROUP BY id_tandon
+            )
         )
         SELECT 
             a.id_area,
@@ -32,11 +42,12 @@ const Dashboard = {
             t.status_pompa,
             t.status_s1,
             t.status_s2,
-            -- --- FIXED: KITA MASUKKAN KOLOM DATA SENSOR REALTIME DI SINI ---
-            t.ph,           
-            t.ppm,          
-            t.volume_air,   
-            -- -------------------------------------------------------------
+            -- --- FIXED: AMBIL DATA DARI CTE LOGSENSORTERBARU (ALUR SEPERTI DETAIL TANDON) ---
+            s.ph,           
+            s.ppm,          
+            s.volume_air,   
+            s.is_hujan,
+            -- -------------------------------------------------------------------------------
             t.min_ph,
             t.max_ph,
             t.min_ppm,
@@ -45,6 +56,8 @@ const Dashboard = {
             t.last_seen
         FROM AreaTerbatas a
         LEFT JOIN TandonBerurutan t ON a.id_area = t.id_area AND t.nomor_urut <= 2
+        -- Hubungkan hasil tandon dengan log sensor terbarunya
+        LEFT JOIN LogSensorTerbaru s ON t.id_tandon = s.id_tandon
         ORDER BY t.device_id DESC, a.id_area DESC, t.id_tandon ASC;`;
 
     const [rows] = await db.query(query, [id_user]);
