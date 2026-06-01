@@ -34,7 +34,8 @@ SELECT
     t.max_ph,
     t.min_ppm,
     t.max_ppm,
-    t.min_volume
+    t.min_volume,
+    t.last_seen
 FROM AreaTerbatas a
 LEFT JOIN TandonBerurutan t ON a.id_area = t.id_area AND t.nomor_urut <= 2
 ORDER BY t.device_id DESC, a.id_area DESC, t.id_tandon ASC;`;
@@ -73,6 +74,7 @@ ORDER BY t.device_id DESC, a.id_area DESC, t.id_tandon ASC;`;
           min_ppm: row.min_ppm,
           max_ppm: row.max_ppm,
           min_volume: row.min_volume,
+          last_seen: row.last_seen,
         });
       }
     });

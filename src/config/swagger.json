@@ -493,6 +493,14 @@
         ],
         "responses": { "200": { "description": "Berhasil Hapus" } }
       }
+    },
+    "/api/dashboard/summary": {
+      "get": {
+        "tags": ["Dashboard"],
+        "summary": "get summary dashboard",
+        "security": [{ "bearerAuth": [] }],
+        "responses": { "201": { "description": "Tandon Berhasil Dibuat" } }
+      }
     }
   }
 }
