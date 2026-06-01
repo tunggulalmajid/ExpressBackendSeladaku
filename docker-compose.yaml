@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: backend_seladaku_express
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000" # Terkunci di localhost VPS, diakses publik aman via Nginx
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: mysql:8.0
+    container_name: backend_seladaku_mysql
+    restart: always
+    ports:
+      - "3306:3306" # Dibuka agar Anda bisa meremote database dari laptop via DBeaver/Navicat
+    environment:
+      - MYSQL_ROOT_PASSWORD=RootSecretPassword99!
+      - MYSQL_DATABASE=ppl_seladaku_2
+      - MYSQL_USER=tunggul_user
+      - MYSQL_PASSWORD=KatasandiRahasiaDB123!
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
