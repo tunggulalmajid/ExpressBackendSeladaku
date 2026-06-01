@@ -2,7 +2,6 @@ const db = require("../config/dbConf");
 
 const Dashboard = {
   getSummaryArea: async (id_user) => {
-    // Kita tambahkan t.id_area dan t.tanggal_tanam di SELECT utama untuk menjamin kelengkapan model
     const query = `
         WITH AreaTerbatas AS (
             SELECT a.id_area, a.nama, a.status 
@@ -26,13 +25,18 @@ const Dashboard = {
             a.status AS status_area,
             t.id_tandon,
             t.nama_tandon,
-            t.id_area AS id_area_tandon, -- Tambahan eksplisit untuk id_area milik tandon
-            t.tanggal_tanam,              -- Tambahan pengisi data dasar tandon
+            t.id_area AS id_area_tandon,
+            t.tanggal_tanam,
             t.device_id,
             t.mode_otomatis,
             t.status_pompa,
             t.status_s1,
             t.status_s2,
+            -- --- FIXED: KITA MASUKKAN KOLOM DATA SENSOR REALTIME DI SINI ---
+            t.ph,           
+            t.ppm,          
+            t.volume_air,   
+            -- -------------------------------------------------------------
             t.min_ph,
             t.max_ph,
             t.min_ppm,
@@ -65,14 +69,18 @@ const Dashboard = {
         area.list_tandon.push({
           id_tandon: row.id_tandon,
           nama_tandon: row.nama_tandon,
-          // --- PENYELAMAT FLUTTER (SINKRONISASI MODEL) ---
-          id_area: row.id_area_tandon || row.id_area, // Dipaksa terisi agar TandonModel di Flutter tidak menganggapnya NULL int
+          id_area: row.id_area_tandon || row.id_area,
           tanggal_tanam: row.tanggal_tanam,
           device_id: row.device_id,
           mode_otomatis: row.mode_otomatis,
           status_pompa: row.status_pompa,
           status_s1: row.status_s1,
           status_s2: row.status_s2,
+          // --- FIXED: PETAKAN DATA SENSOR AGAR MASUK KE JSON RESPONSE ---
+          ph: row.ph,
+          ppm: row.ppm,
+          volume: row.volume_air, // Kita namai 'volume' agar klop dengan TandonModel Flutter (json['volume'])
+          // -------------------------------------------------------------
           min_ph: row.min_ph,
           max_ph: row.max_ph,
           min_ppm: row.min_ppm,
