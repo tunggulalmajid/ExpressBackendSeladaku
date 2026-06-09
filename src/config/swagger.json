@@ -3,7 +3,7 @@
   "info": {
     "title": "Seladaku IoT API Documentation",
     "version": "1.3.0",
-    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, koordinat GPS, dan kontrol tandon modular."
+    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, koordinat GPS, kontrol tandon modular, dan grafik riwayat sensor historis."
   },
   "servers": [
     {
@@ -97,6 +97,32 @@
           "ppm": { "type": "number", "nullable": true },
           "volume_air": { "type": "number", "nullable": true },
           "is_hujan": { "type": "integer", "nullable": true }
+        }
+      },
+      "RiwayatGrafik": {
+        "type": "object",
+        "properties": {
+          "x_label": {
+            "type": "string",
+            "description": "Label waktu pada sumbu X grafik (Jam/Hari/Tanggal)",
+            "example": "Sen"
+          },
+          "ph": {
+            "type": "number",
+            "format": "float",
+            "description": "Rata-rata nilai pH air",
+            "example": 5.85
+          },
+          "ppm": {
+            "type": "integer",
+            "description": "Rata-rata kepekatan nutrisi PPM",
+            "example": 730
+          },
+          "volume": {
+            "type": "integer",
+            "description": "Rata-rata volume kapasitas air (%)",
+            "example": 74
+          }
         }
       }
     }
@@ -499,7 +525,60 @@
         "tags": ["Dashboard"],
         "summary": "get summary dashboard",
         "security": [{ "bearerAuth": [] }],
-        "responses": { "201": { "description": "Tandon Berhasil Dibuat" } }
+        "responses": {
+          "200": { "description": "Data summary dashboard berhasil didapatkan" }
+        }
+      }
+    },
+    "/api/riwayat/grafik/{id_tandon}": {
+      "get": {
+        "tags": ["Riwayat"],
+        "summary": "Ambil log sensor agregasi untuk visualisasi fl_chart",
+        "description": "Menyajikan log rata-rata terkompresi berdasarkan rentang waktu harian (per jam), mingguan (per nama hari), atau bulanan (per tanggal).",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id_tandon",
+            "in": "path",
+            "description": "ID Tandon target yang ingin dianalisis histori riwayatnya",
+            "required": true,
+            "schema": { "type": "integer", "example": 11 }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "description": "Rentang batasan filter agregasi grafik",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["harian", "mingguan", "bulanan"],
+              "default": "harian"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Data agregasi historis sensor berhasil dihitung",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Data riwayat mingguan berhasil didapatkan"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/RiwayatGrafik" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

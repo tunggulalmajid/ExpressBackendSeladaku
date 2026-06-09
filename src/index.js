@@ -36,6 +36,7 @@ const authRoutes = require("./routes/authRoutes");
 const areaRoutes = require("./routes/areaRoutes");
 const tandonRoutes = require("./routes/tandonRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const riwayatRoutes = require("./routes/riwayatRoutes");
 
 app.get("/", (req, res) => {
   res.json({
@@ -51,6 +52,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/area", areaRoutes);
 app.use("/api/tandon", tandonRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/riwayat", riwayatRoutes);
 
 app.use((err, req, res, next) => {
   console.error(`[Error]: ${err.message}`);
