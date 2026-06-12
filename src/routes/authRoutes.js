@@ -16,7 +16,8 @@ router.put(
   upload.single("foto"),
   AuthController.updateProfile,
 );
-router.patch("/fcm-token", verifyToken, AuthController.updateFcm);
-router.delete("/logout", verifyToken, AuthController.logout);
+
+router.post("/tandon/:id/fcm-token", verifyToken, AuthController.updateFcm);
+router.delete("/tandon/:id/fcm-token", verifyToken, AuthController.deleteFcm);
 
 module.exports = router;

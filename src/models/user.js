@@ -78,9 +78,15 @@ const User = {
     );
     return rows[0];
   },
-  updateFcmToken: async (id_user, fcmToken) => {
-    const query = "UPDATE user SET fcm_token = ? WHERE id_user = ?";
-    const [result] = await db.execute(query, [fcmToken, id_user]);
+  saveFcmToken: async (id_tandon, fcmToken) => {
+    const query = "UPDATE tandon SET fcm_token = ? WHERE id_tandon = ?";
+    const [result] = await db.execute(query, [fcmToken, id_tandon]);
+    return result.affectedRows > 0;
+  },
+
+  clearFcmToken: async (id_tandon) => {
+    const query = "UPDATE tandon SET fcm_token = NULL WHERE id_tandon = ?";
+    const [result] = await db.execute(query, [id_tandon]);
     return result.affectedRows > 0;
   },
 };

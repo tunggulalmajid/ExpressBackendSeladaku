@@ -1,19 +1,15 @@
 const TelegramBot = require("node-telegram-bot-api");
 
-// Ambil token bot dari file .env
 const token = process.env.TELEGRAM_BOT_TOKEN;
 
-// Inisialisasi bot dengan mode polling (selalu standby mendengarkan pesan masuk)
 const bot = new TelegramBot(token, { polling: true });
 
 console.log("🤖 Telegram Bot Seladaku is standby and polling...");
 
-// --- 1. HANDLING CHAT MASUK (Fitur Memunculkan ID Telegram) ---
 bot.on("message", (msg) => {
   const chatId = msg.chat.id;
   const textInput = msg.text ? msg.text.trim() : "";
 
-  // Jika user mengetik /start, /id, atau mengirim chat apa saja, bot langsung membalas dengan ID-nya
   if (textInput === "/start") {
     bot.sendMessage(
       chatId,
@@ -22,17 +18,19 @@ bot.on("message", (msg) => {
         `Key ID: \`${chatId}\``,
       { parse_mode: "Markdown" },
     );
-  } else {
-    // Membalas pesan teks umum agar user langsung bisa menyalin ID mereka dengan mudah
+  } else if (textInput === "/id") {
     bot.sendMessage(
       chatId,
       `ID Telegram Anda adalah: \`${chatId}\`\n\n_Salin nomor di atas dan tempelkan ke pengaturan profil aplikasi Seladaku Anda._`,
       { parse_mode: "Markdown" },
     );
+  } else {
+    bot.sendMessage(chatId, `pesan yang anda kirim tidak valid`, {
+      parse_mode: "Markdown",
+    });
   }
 });
 
-// --- 2. HELPER SERVICE UNTUK MENEMBAK NOTIFIKASI DARI BACKEND ---
 const telegramService = {
   /**
    * Fungsi untuk mengirim pesan dari backend ke chat Telegram pribadi milik user
@@ -43,7 +41,6 @@ const telegramService = {
     try {
       if (!telegramId) return { success: false, error: "ID Telegram kosong" };
 
-      // Kirim pesan dengan format Markdown agar tampilan emoji dan tulisan tebal rapi
       await bot.sendMessage(telegramId, messageText, {
         parse_mode: "Markdown",
       });

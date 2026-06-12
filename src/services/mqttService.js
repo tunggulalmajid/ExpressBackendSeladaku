@@ -198,7 +198,7 @@ const setupMqtt = (io) => {
               const pesanHujanGlobal = `Kebun Anda terdeteksi diguyur hujan. Mohon pantau kondisi tanaman selada Anda.`;
               await notifService.buatDanKirimNotif(
                 id_user,
-                null,
+                id_tandon,
                 pesanHujanGlobal,
                 "INFO",
                 "Kebun Diguyur Hujan 🌦️",
