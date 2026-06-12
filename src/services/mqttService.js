@@ -4,7 +4,7 @@ const Riwayat = require("../models/riwayat");
 const notifService = require("../services/notificationService");
 require("dotenv");
 
-// Memori lokal di server untuk mencatat hitungan fluktuasi tandon secara dinamis
+// Memori lokal di server untuk mencatat hitungan fluktuasi dan jeda waktu notifikasi
 const tandonCounters = {};
 
 const setupMqtt = (io) => {
@@ -43,9 +43,16 @@ const setupMqtt = (io) => {
         mode_otomatis,
       } = tandonRows[0];
 
-      // Inisialisasi counter tandon di memori server jika belum terdaftar
+      // Inisialisasi counter dan timestamp di memori server jika belum terdaftar
       if (!tandonCounters[id_tandon]) {
-        tandonCounters[id_tandon] = { ph: 0, ppm: 0, volume: 0 };
+        tandonCounters[id_tandon] = {
+          ph: 0,
+          ppm: 0,
+          volume: 0,
+          last_notified_ph: null,
+          last_notified_ppm: null,
+          last_notified_volume: null,
+        };
       }
 
       // 1. Hitung Volume Air
@@ -81,62 +88,92 @@ const setupMqtt = (io) => {
       io.emit(`sensor-${id_tandon}`, { ...dataRiwayat, ...statusAktuator });
 
       // =========================================================================
-      // --- LOGIKA ANTI-FLUKTUASI (COUNTER AMBANG BATAS) ---
+      // --- LOGIKA ANTI-FLUKTUASI + TIMING ALERT JEDA 1 JAM ---
       // =========================================================================
-      const BATAS_TOLERANSI = 3; // Berapa kali data berturut-turut abnormal sebelum kirim notif
+      const BATAS_TOLERANSI = 3;
+      const JEDA_NOTIFIKASI = 1 * 60 * 60 * 1000; // Konversi 1 Jam ke dalam milidetik
+      const waktuSekarang = Date.now();
 
       // A. Validasi Kritis pH Air
       if (ph < min_ph || ph > max_ph) {
         tandonCounters[id_tandon].ph += 1;
-        if (tandonCounters[id_tandon].ph === BATAS_TOLERANSI) {
-          const pesanPh = `Kadar pH pada ${nama_tandon} berada di luar batas normal (${ph}).`;
-          await notifService.buatDanKirimNotif(
-            id_user,
-            id_tandon,
-            pesanPh,
-            "WARNING",
-            "pH Tidak Normal ⚠️",
-          );
+
+        if (tandonCounters[id_tandon].ph >= BATAS_TOLERANSI) {
+          const lastNotified = tandonCounters[id_tandon].last_notified_ph;
+
+          // Kirim jika belum pernah kirim, ATAU waktu sekarang sudah melewati 1 jam dari notif terakhir
+          if (
+            !lastNotified ||
+            waktuSekarang - lastNotified >= JEDA_NOTIFIKASI
+          ) {
+            const pesanPh = `Kadar pH pada ${nama_tandon} berada di luar batas normal (${ph}).`;
+            await notifService.buatDanKirimNotif(
+              id_user,
+              id_tandon,
+              pesanPh,
+              "WARNING",
+              "pH Tidak Normal ⚠️",
+            );
+            tandonCounters[id_tandon].last_notified_ph = waktuSekarang; // Update kunci waktu
+          }
         }
       } else {
-        tandonCounters[id_tandon].ph = 0; // Reset ke 0 jika kembali normal
+        tandonCounters[id_tandon].ph = 0; // Reset counter saja, waktu last_notified_ph dibiarkan menetap
       }
 
       // B. Validasi Kritis Kepekatan Nutrisi PPM
       if (ppm < min_ppm || ppm > max_ppm) {
         tandonCounters[id_tandon].ppm += 1;
-        if (tandonCounters[id_tandon].ppm === BATAS_TOLERANSI) {
-          const pesanPpm = `Nutrisi pada ${nama_tandon} tidak stabil (${ppm} ppm). Segera cek tandon nutrisi Anda.`;
-          await notifService.buatDanKirimNotif(
-            id_user,
-            id_tandon,
-            pesanPpm,
-            "WARNING",
-            "Nutrisi Tidak Normal ⚠️",
-          );
+
+        if (tandonCounters[id_tandon].ppm >= BATAS_TOLERANSI) {
+          const lastNotified = tandonCounters[id_tandon].last_notified_ppm;
+
+          if (
+            !lastNotified ||
+            waktuSekarang - lastNotified >= JEDA_NOTIFIKASI
+          ) {
+            const pesanPpm = `Nutrisi pada ${nama_tandon} tidak stabil (${ppm} ppm). Segera cek tandon nutrisi Anda.`;
+            await notifService.buatDanKirimNotif(
+              id_user,
+              id_tandon,
+              pesanPpm,
+              "WARNING",
+              "Nutrisi Tidak Normal ⚠️",
+            );
+            tandonCounters[id_tandon].last_notified_ppm = waktuSekarang;
+          }
         }
       } else {
-        tandonCounters[id_tandon].ppm = 0; // Reset ke 0
+        tandonCounters[id_tandon].ppm = 0; // Hanya reset counter
       }
 
       // C. Validasi Kritis Volume Air Kapasitas
       if (volumePersen < min_volume) {
         tandonCounters[id_tandon].volume += 1;
-        if (tandonCounters[id_tandon].volume === BATAS_TOLERANSI) {
-          const pesanVol = `Level Air Rendah. ${nama_tandon} memerlukan pengisian air segera (${volumePersen}%).`;
-          await notifService.buatDanKirimNotif(
-            id_user,
-            id_tandon,
-            pesanVol,
-            "WARNING",
-            "Level Air Rendah ⚠️",
-          );
+
+        if (tandonCounters[id_tandon].volume >= BATAS_TOLERANSI) {
+          const lastNotified = tandonCounters[id_tandon].last_notified_volume;
+
+          if (
+            !lastNotified ||
+            waktuSekarang - lastNotified >= JEDA_NOTIFIKASI
+          ) {
+            const pesanVol = `Level Air Rendah. ${nama_tandon} memerlukan pengisian air segera (${volumePersen}%).`;
+            await notifService.buatDanKirimNotif(
+              id_user,
+              id_tandon,
+              pesanVol,
+              "WARNING",
+              "Level Air Rendah ⚠️",
+            );
+            tandonCounters[id_tandon].last_notified_volume = waktuSekarang;
+          }
         }
       } else {
-        tandonCounters[id_tandon].volume = 0; // Reset ke 0
+        tandonCounters[id_tandon].volume = 0; // Hanya reset counter
       }
 
-      // D. Validasi Keadaan Hujan (Khusus hujan tidak perlu counter karena sensor hujan umumnya stabil biner)
+      // D. Validasi Keadaan Hujan
       if (is_hujan === 1 || is_hujan === true) {
         if (mode_otomatis === 1 || mode_otomatis === true) {
           const pesanOtomatis = `Hujan terdeteksi! Mode Hujan aktif ${nama_tandon}.`;
