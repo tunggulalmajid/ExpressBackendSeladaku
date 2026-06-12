@@ -17,7 +17,6 @@ router.put(
   AuthController.updateProfile,
 );
 
-router.post("/tandon/:id/fcm-token", verifyToken, AuthController.updateFcm);
-router.delete("/tandon/:id/fcm-token", verifyToken, AuthController.deleteFcm);
+
 
 module.exports = router;
