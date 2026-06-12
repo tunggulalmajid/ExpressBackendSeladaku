@@ -49,9 +49,11 @@ const setupMqtt = (io) => {
           ph: 0,
           ppm: 0,
           volume: 0,
+          hujan: 0, // Tambah counter khusus hujan
           last_notified_ph: null,
           last_notified_ppm: null,
           last_notified_volume: null,
+          last_notified_hujan: null, // Tambah kunci waktu khusus hujan
         };
       }
 
@@ -101,7 +103,6 @@ const setupMqtt = (io) => {
         if (tandonCounters[id_tandon].ph >= BATAS_TOLERANSI) {
           const lastNotified = tandonCounters[id_tandon].last_notified_ph;
 
-          // Kirim jika belum pernah kirim, ATAU waktu sekarang sudah melewati 1 jam dari notif terakhir
           if (
             !lastNotified ||
             waktuSekarang - lastNotified >= JEDA_NOTIFIKASI
@@ -114,11 +115,11 @@ const setupMqtt = (io) => {
               "WARNING",
               "pH Tidak Normal ⚠️",
             );
-            tandonCounters[id_tandon].last_notified_ph = waktuSekarang; // Update kunci waktu
+            tandonCounters[id_tandon].last_notified_ph = waktuSekarang;
           }
         }
       } else {
-        tandonCounters[id_tandon].ph = 0; // Reset counter saja, waktu last_notified_ph dibiarkan menetap
+        tandonCounters[id_tandon].ph = 0;
       }
 
       // B. Validasi Kritis Kepekatan Nutrisi PPM
@@ -144,7 +145,7 @@ const setupMqtt = (io) => {
           }
         }
       } else {
-        tandonCounters[id_tandon].ppm = 0; // Hanya reset counter
+        tandonCounters[id_tandon].ppm = 0;
       }
 
       // C. Validasi Kritis Volume Air Kapasitas
@@ -170,30 +171,45 @@ const setupMqtt = (io) => {
           }
         }
       } else {
-        tandonCounters[id_tandon].volume = 0; // Hanya reset counter
+        tandonCounters[id_tandon].volume = 0;
       }
 
-      // D. Validasi Keadaan Hujan
+      // D. Validasi Keadaan Hujan + Proteksi Fluktuasi & Spam Jeda 1 Jam
       if (is_hujan === 1 || is_hujan === true) {
-        if (mode_otomatis === 1 || mode_otomatis === true) {
-          const pesanOtomatis = `Hujan terdeteksi! Mode Hujan aktif ${nama_tandon}.`;
-          await notifService.buatDanKirimNotif(
-            id_user,
-            id_tandon,
-            pesanOtomatis,
-            "AUTOMATION",
-            "Mode Hujan Tandon Aktif 🤖",
-          );
-        } else {
-          const pesanHujanGlobal = `Kebun Anda terdeteksi diguyur hujan. Mohon pantau kondisi tanaman selada Anda.`;
-          await notifService.buatDanKirimNotif(
-            id_user,
-            null,
-            pesanHujanGlobal,
-            "INFO",
-            "Kebun Diguyur Hujan 🌦️",
-          );
+        tandonCounters[id_tandon].hujan += 1;
+
+        if (tandonCounters[id_tandon].hujan >= BATAS_TOLERANSI) {
+          const lastNotified = tandonCounters[id_tandon].last_notified_hujan;
+
+          if (
+            !lastNotified ||
+            waktuSekarang - lastNotified >= JEDA_NOTIFIKASI
+          ) {
+            if (mode_otomatis === 1 || mode_otomatis === true) {
+              const pesanOtomatis = `Hujan terdeteksi! Mode Hujan aktif ${nama_tandon}.`;
+              await notifService.buatDanKirimNotif(
+                id_user,
+                id_tandon,
+                pesanOtomatis,
+                "AUTOMATION",
+                "Mode Hujan Tandon Aktif 🤖",
+              );
+            } else {
+              const pesanHujanGlobal = `Kebun Anda terdeteksi diguyur hujan. Mohon pantau kondisi tanaman selada Anda.`;
+              await notifService.buatDanKirimNotif(
+                id_user,
+                null,
+                pesanHujanGlobal,
+                "INFO",
+                "Kebun Diguyur Hujan 🌦️",
+              );
+            }
+            // Kunci waktu pengiriman setelah notifikasi terkirim (baik mode auto maupun global)
+            tandonCounters[id_tandon].last_notified_hujan = waktuSekarang;
+          }
         }
+      } else {
+        tandonCounters[id_tandon].hujan = 0; // Reset counter hujan ke 0 saat sensor sudah kering/tidak hujan
       }
     } catch (err) {
       console.error("❌ MQTT Message Error:", err.message);
