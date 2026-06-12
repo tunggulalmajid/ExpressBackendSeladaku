@@ -37,7 +37,7 @@ const notificationService = {
           id_tandon: idTandon ? idTandon.toString() : "",
         };
         // Memanggil config firebaseConf-mu
-        await firebaseMessaging.kirifmNotif(
+        await firebaseMessaging.kirimNotif(
           fcmToken,
           titleFCM,
           pesan,
