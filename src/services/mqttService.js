@@ -1,6 +1,11 @@
 const mqtt = require("mqtt");
 const Tandon = require("../models/tandon");
 const Riwayat = require("../models/riwayat");
+const notifService = require("../services/notificationService");
+require("dotenv");
+
+// Memori lokal di server untuk mencatat hitungan fluktuasi tandon secara dinamis
+const tandonCounters = {};
 
 const setupMqtt = (io) => {
   const client = mqtt.connect(process.env.MQTT_URL, {
@@ -11,7 +16,7 @@ const setupMqtt = (io) => {
   // --- 1. KONEKSI MQTT ---
   client.on("connect", () => {
     console.log("✅ MQTT Connected to HiveMQ Cloud");
-    client.subscribe("zurian/+/sensor");
+    client.subscribe("#");
   });
 
   // --- 2. PENANGANAN DATA DARI ALAT (ESP32 -> Backend) ---
@@ -19,57 +24,139 @@ const setupMqtt = (io) => {
     try {
       const payload = JSON.parse(message.toString());
       const { device_id, ph, ppm, volume_air, is_hujan } = payload;
-      console.log(
-        `device id : ${device_id}, ph : ${ph}, ppm : ${ppm}, volume_air : ${volume_air}, is hujan : ${is_hujan}`,
-      );
-
+      console.log(payload);
       const tandonRows = await Tandon.getTandonByDevice(device_id);
-      if (tandonRows.length > 0) {
-        const { id_tandon, tinggi_tandon, jarak_aman } = tandonRows[0];
+      console.log(tandonRows.length);
+      if (tandonRows.length === 0) return;
 
-        // 1. Hitung Volume Air
-        const rangeEfektif = tinggi_tandon - jarak_aman;
-        console.log("range efektif:", rangeEfektif.toString());
-        const jarakAirSekarang = tinggi_tandon - volume_air;
-        console.log("Jarak Air:", jarakAirSekarang.toString());
-        let volumePersen = Math.round((jarakAirSekarang / rangeEfektif) * 100);
-        volumePersen = Math.max(0, Math.min(100, volumePersen));
+      const {
+        id_tandon,
+        tinggi_tandon,
+        jarak_aman,
+        id_user,
+        nama_tandon,
+        min_ph,
+        max_ph,
+        min_ppm,
+        max_ppm,
+        min_volume,
+        mode_otomatis,
+      } = tandonRows[0];
 
-        // 2. Data Khusus Tabel riwayat_data (Sesuai kolom di image_92a07b.jpg)
-        const dataRiwayat = {
-          ph: ph ?? 0,
-          ppm: ppm ?? 0,
-          volume_air: volumePersen,
-          is_hujan: is_hujan ? 1 : 0,
-        };
+      // Inisialisasi counter tandon di memori server jika belum terdaftar
+      if (!tandonCounters[id_tandon]) {
+        tandonCounters[id_tandon] = { ph: 0, ppm: 0, volume: 0 };
+      }
 
-        // 3. Data Khusus Tabel tandon (HANYA kolom yang ada di tabel tandon)
-        // JANGAN sertakan 'ph' atau 'ppm' di sini karena akan menyebabkan error Unknown Column
-        const statusAktuator = {
-          last_seen: new Date(),
-        };
+      // 1. Hitung Volume Air
+      const rangeEfektif = tinggi_tandon - jarak_aman;
+      const jarakAirSekarang = tinggi_tandon - volume_air;
+      let volumePersen = Math.round((jarakAirSekarang / rangeEfektif) * 100);
+      volumePersen = Math.max(0, Math.min(100, volumePersen));
 
-        // Hanya update status jika ESP32 mengirimkannya
-        if (payload.status_pompa !== undefined)
-          statusAktuator.status_pompa = payload.status_pompa;
-        if (payload.status_s1 !== undefined)
-          statusAktuator.status_s1 = payload.status_s1;
-        if (payload.status_s2 !== undefined)
-          statusAktuator.status_s2 = payload.status_s2;
-        if (payload.mode_otomatis !== undefined) {
-          statusAktuator.mode_otomatis = payload.mode_otomatis ? 1 : 0;
+      // 2. Siapkan data penampung database
+      const dataRiwayat = {
+        ph: ph ?? 0,
+        ppm: ppm ?? 0,
+        volume_air: volumePersen,
+        is_hujan: is_hujan ? 1 : 0,
+      };
+      const statusAktuator = { last_seen: new Date() };
+
+      if (payload.status_pompa !== undefined)
+        statusAktuator.status_pompa = payload.status_pompa;
+      if (payload.status_s1 !== undefined)
+        statusAktuator.status_s1 = payload.status_s1;
+      if (payload.status_s2 !== undefined)
+        statusAktuator.status_s2 = payload.status_s2;
+      if (payload.mode_otomatis !== undefined)
+        statusAktuator.mode_otomatis = payload.mode_otomatis ? 1 : 0;
+
+      // 3. TETAP SIMPAN KE DATABASE (Agar grafik Flutter mendeteksi fluktuasi asli lapangan)
+      await Promise.all([
+        Riwayat.createRiwayat(id_tandon, dataRiwayat),
+        Tandon.update(id_tandon, statusAktuator),
+      ]);
+
+      io.emit(`sensor-${id_tandon}`, { ...dataRiwayat, ...statusAktuator });
+
+      // =========================================================================
+      // --- LOGIKA ANTI-FLUKTUASI (COUNTER AMBANG BATAS) ---
+      // =========================================================================
+      const BATAS_TOLERANSI = 3; // Berapa kali data berturut-turut abnormal sebelum kirim notif
+
+      // A. Validasi Kritis pH Air
+      if (ph < min_ph || ph > max_ph) {
+        tandonCounters[id_tandon].ph += 1;
+        if (tandonCounters[id_tandon].ph === BATAS_TOLERANSI) {
+          const pesanPh = `Kadar pH pada ${nama_tandon} berada di luar batas normal (${ph}).`;
+          await notifService.buatDanKirimNotif(
+            id_user,
+            id_tandon,
+            pesanPh,
+            "WARNING",
+            "pH Tidak Normal ⚠️",
+          );
         }
+      } else {
+        tandonCounters[id_tandon].ph = 0; // Reset ke 0 jika kembali normal
+      }
 
-        // 4. Eksekusi ke masing-masing tabel
-        await Promise.all([
-          Riwayat.createRiwayat(id_tandon, dataRiwayat), // Masuk ke riwayat_data
-          Tandon.update(id_tandon, statusAktuator), // Masuk ke tandon (Hanya kolom aktuator)
-        ]);
+      // B. Validasi Kritis Kepekatan Nutrisi PPM
+      if (ppm < min_ppm || ppm > max_ppm) {
+        tandonCounters[id_tandon].ppm += 1;
+        if (tandonCounters[id_tandon].ppm === BATAS_TOLERANSI) {
+          const pesanPpm = `Nutrisi pada ${nama_tandon} tidak stabil (${ppm} ppm). Segera cek tandon nutrisi Anda.`;
+          await notifService.buatDanKirimNotif(
+            id_user,
+            id_tandon,
+            pesanPpm,
+            "WARNING",
+            "Nutrisi Tidak Normal ⚠️",
+          );
+        }
+      } else {
+        tandonCounters[id_tandon].ppm = 0; // Reset ke 0
+      }
 
-        // 5. Kirim data gabungan ke Flutter agar UI terupdate lengkap
-        io.emit(`sensor-${id_tandon}`, { ...dataRiwayat, ...statusAktuator });
+      // C. Validasi Kritis Volume Air Kapasitas
+      if (volumePersen < min_volume) {
+        tandonCounters[id_tandon].volume += 1;
+        if (tandonCounters[id_tandon].volume === BATAS_TOLERANSI) {
+          const pesanVol = `Level Air Rendah. ${nama_tandon} memerlukan pengisian air segera (${volumePersen}%).`;
+          await notifService.buatDanKirimNotif(
+            id_user,
+            id_tandon,
+            pesanVol,
+            "WARNING",
+            "Level Air Rendah ⚠️",
+          );
+        }
+      } else {
+        tandonCounters[id_tandon].volume = 0; // Reset ke 0
+      }
 
-        console.log(`[DATA] Tandon ${id_tandon} Berhasil Sinkron.`);
+      // D. Validasi Keadaan Hujan (Khusus hujan tidak perlu counter karena sensor hujan umumnya stabil biner)
+      if (is_hujan === 1 || is_hujan === true) {
+        if (mode_otomatis === 1 || mode_otomatis === true) {
+          const pesanOtomatis = `Hujan terdeteksi! Mode Hujan aktif ${nama_tandon}.`;
+          await notifService.buatDanKirimNotif(
+            id_user,
+            id_tandon,
+            pesanOtomatis,
+            "AUTOMATION",
+            "Mode Hujan Tandon Aktif 🤖",
+          );
+        } else {
+          const pesanHujanGlobal = `Kebun Anda terdeteksi diguyur hujan. Mohon pantau kondisi tanaman selada Anda.`;
+          await notifService.buatDanKirimNotif(
+            id_user,
+            null,
+            pesanHujanGlobal,
+            "INFO",
+            "Kebun Diguyur Hujan 🌦️",
+          );
+        }
       }
     } catch (err) {
       console.error("❌ MQTT Message Error:", err.message);
@@ -89,23 +176,11 @@ const setupMqtt = (io) => {
         const tandonCurrent = rows[0];
         const isAuto = tandonCurrent.mode_otomatis === 1;
 
-        // --- LOGIKA BLOKIR (Penyebab kenapa dia otomatis pindah manual ada di sini sebelumnya) ---
-
         if (target !== "mode" && isAuto) {
-          // Jika mode masih AUTO, kita STOP di sini dan tidak kirim apa pun ke MQTT
-          console.log(
-            `[REJECTED] Perintah ${target} diblokir karena Tandon ${tandonCurrent.id_tandon} masih AUTO`,
-          );
-
-          // Beritahu Flutter bahwa aksi ini dilarang
           return socket.emit("error-msg", {
             message: "Aksi ditolak! Matikan mode AUTO terlebih dahulu.",
           });
         }
-
-        // Jika sampai di sini, berarti:
-        // 1. Targetnya memang "mode" (ingin ubah manual/auto)
-        // 2. Atau targetnya s1/s2/pompa DAN status sudah manual.
 
         let modeStatus = isAuto ? "auto" : "manual";
 
@@ -117,7 +192,6 @@ const setupMqtt = (io) => {
           });
         }
 
-        // Susun Payload JSON sesuai keinginan ESP32
         const mqttPayload = { mode: modeStatus };
         if (target !== "mode") {
           mqttPayload[target] = command.toLowerCase();
@@ -126,18 +200,10 @@ const setupMqtt = (io) => {
         const topicAktuator = `zurian/${device_id}/aktuator`;
         const messageToESP = JSON.stringify(mqttPayload);
 
-        client.publish(topicAktuator, messageToESP, { qos: 1 }, (err) => {
-          if (!err) {
-            console.log(`[MQTT] Sent JSON -> ${messageToESP}`);
-          }
-        });
+        client.publish(topicAktuator, messageToESP, { qos: 1 });
       } catch (error) {
         console.error("❌ Control Error:", error.message);
       }
-    });
-
-    socket.on("disconnect", () => {
-      console.log("📱 Client Disconnected");
     });
   });
 };

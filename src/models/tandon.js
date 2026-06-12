@@ -37,7 +37,25 @@ const Tandon = {
 
   getTandonByDevice: async (device_id) => {
     const query = `
-      SELECT id_tandon,tinggi_tandon, jarak_aman, min_volume, mode_otomatis from tandon where device_id = ?`;
+    SELECT 
+      t.id_tandon, 
+      t.tinggi_tandon, 
+      t.jarak_aman, 
+      t.nama_tandon, 
+      t.min_ph, 
+      t.max_ph, 
+      t.min_ppm, 
+      t.max_ppm, 
+      t.min_volume, 
+      t.mode_otomatis,
+      a.id_area,
+      u.id_user
+    FROM tandon t
+    INNER JOIN area a ON t.id_area = a.id_area
+    INNER JOIN user u ON a.id_user = u.id_user
+    WHERE t.device_id = ?
+  `;
+
     const [rows] = await db.query(query, [device_id]);
     return rows;
   },
@@ -106,6 +124,6 @@ const Tandon = {
     const [result] = await db.query(query, [id_tandon]);
     return result.affectedRows > 0;
   },
-};  
+};
 
 module.exports = Tandon;

@@ -3,7 +3,7 @@
   "info": {
     "title": "Seladaku IoT API Documentation",
     "version": "1.3.0",
-    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, koordinat GPS, kontrol tandon modular, dan grafik riwayat sensor historis."
+    "description": "Dokumentasi API untuk sistem monitoring hidroponik Seladaku. Mencakup integrasi profil user, manajemen area kebun, koordinat GPS, kontrol tandon modular, grafik riwayat sensor historis, dan riwayat log notifikasi vegetasi."
   },
   "servers": [
     {
@@ -122,6 +122,34 @@
             "type": "integer",
             "description": "Rata-rata volume kapasitas air (%)",
             "example": 74
+          }
+        }
+      },
+      "Notifikasi": {
+        "type": "object",
+        "properties": {
+          "id_notifikasi": { "type": "integer", "example": 12 },
+          "id_user": { "type": "integer", "example": 1 },
+          "pesan": {
+            "type": "string",
+            "example": "Kadar pH pada Tandon B berada di luar batas normal (6.8)."
+          },
+          "tipe": {
+            "type": "string",
+            "enum": ["INFO", "WARNING", "AUTOMATION"],
+            "example": "WARNING"
+          },
+          "id_tandon": { "type": "integer", "nullable": true, "example": 5 },
+          "is_read": { "type": "boolean", "example": false },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-06-11T10:15:00.000Z"
+          },
+          "nama_tandon": {
+            "type": "string",
+            "nullable": true,
+            "example": "Tandon B"
           }
         }
       }
@@ -577,6 +605,115 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/notifikasi": {
+      "get": {
+        "tags": ["Notifikasi"],
+        "summary": "Ambil riwayat semua log notifikasi milik user",
+        "description": "Mengambil semua daftar notifikasi vegetasi selada yang masuk beserta relasi nama tandonnya.",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Berhasil mendapatkan riwayat log notifikasi",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Berhasil mengambil riwayat notifikasi"
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Notifikasi" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/notifikasi/{id}/read": {
+      "patch": {
+        "tags": ["Notifikasi"],
+        "summary": "Tandai satu notifikasi tertentu sebagai telah dibaca",
+        "description": "Mengubah status is_read dari false menjadi true berdasarkan ID notifikasi.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID unik notifikasi yang ingin dibaca",
+            "schema": { "type": "integer", "example": 12 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Status notifikasi berhasil diperbarui",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Notifikasi berhasil ditandai telah dibaca"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Notifikasi tidak ditemukan atau unauthorized access"
+          }
+        }
+      }
+    },
+    "/api/notifikasi/{id}": {
+      "delete": {
+        "tags": ["Notifikasi"],
+        "summary": "Hapus satu baris notifikasi dari riwayat kebun",
+        "description": "Menghapus data baris riwayat notifikasi secara permanen dari database.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID unik notifikasi yang akan dibuang",
+            "schema": { "type": "integer", "example": 12 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Notifikasi sukses dibuang dari database",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "example": true },
+                    "message": {
+                      "type": "string",
+                      "example": "Notifikasi berhasil dihapus dari riwayat"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Notifikasi tidak ditemukan atau unauthorized access"
           }
         }
       }

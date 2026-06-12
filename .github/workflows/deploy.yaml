@@ -33,10 +33,12 @@ jobs:
           script: |
             # 1. Masuk ke direktori proyek di VPS
             cd ~/projects/backend-seladaku
-            
-            # 2. Membuat file .env fisik di VPS dari rahasia ENV_FILE di GitHub Secrets
-            echo "${{ secrets.ENV_FILE }}" > .env
-            
+
+            # 2. Membuat file .env fisik menggunakan metode Heredoc (Jauh lebih aman untuk string rumit)
+            cat << 'EOF' > .env
+            ${{ secrets.ENV_FILE }}
+            EOF
+
             # 3. Matikan kontainer lama, build ulang dengan kode baru, dan jalankan kembali
             docker compose down
             docker compose up -d --build

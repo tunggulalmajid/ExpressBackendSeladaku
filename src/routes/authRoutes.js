@@ -16,6 +16,7 @@ router.put(
   upload.single("foto"),
   AuthController.updateProfile,
 );
+router.patch("/fcm-token", verifyToken, AuthController.updateFcm);
 router.delete("/logout", verifyToken, AuthController.logout);
 
 module.exports = router;

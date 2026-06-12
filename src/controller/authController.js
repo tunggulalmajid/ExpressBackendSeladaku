@@ -173,6 +173,42 @@ class AuthController {
     await User.updateRefreshToken(req.user.id_user, null);
     res.json({ success: true, message: "Logout berhasil" });
   }
+
+  // METHOD BARU: Handler PATCH /api/auth/fcm-token
+  static async updateFcm(req, res) {
+    try {
+      const userId = req.user.id_user; // Didapatkan dari middleware verifikasi token JWT
+      const { fcm_token } = req.body;
+
+      if (!fcm_token) {
+        return res.status(400).json({
+          success: false,
+          message: "Parameter fcm_token wajib dikirim",
+        });
+      }
+
+      const isSuccess = await User.updateFcmToken(userId, fcm_token);
+
+      if (!isSuccess) {
+        return res.status(404).json({
+          success: false,
+          message: "Gagal memperbarui token perangkat, user tidak ditemukan",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Token FCM perangkat berhasil disinkronkan ke server Seladaku!",
+      });
+    } catch (error) {
+      console.error("Error updateFcm:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Terjadi kesalahan pada server",
+      });
+    }
+  }
 }
 
 module.exports = AuthController;

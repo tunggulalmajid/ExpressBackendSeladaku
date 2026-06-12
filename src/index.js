@@ -1,13 +1,14 @@
+require("dotenv");
 const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const helmet = require("helmet");
 const morgan = require("morgan");
-require("dotenv").config();
 const swaggerUi = require("swagger-ui-express");
 const swaggerDocument = require("./config/swagger.json");
 const { Server } = require("socket.io");
 const setupMqtt = require("./services/mqttService");
+require("./config/telegramConf");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ const areaRoutes = require("./routes/areaRoutes");
 const tandonRoutes = require("./routes/tandonRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const riwayatRoutes = require("./routes/riwayatRoutes");
+const notifikasiRoutes = require("./routes/notifikasiRoutes");
 
 app.get("/", (req, res) => {
   res.json({
@@ -53,6 +55,7 @@ app.use("/api/area", areaRoutes);
 app.use("/api/tandon", tandonRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/riwayat", riwayatRoutes);
+app.use("/api/notifikasi", notifikasiRoutes);
 
 app.use((err, req, res, next) => {
   console.error(`[Error]: ${err.message}`);

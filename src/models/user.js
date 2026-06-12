@@ -78,6 +78,11 @@ const User = {
     );
     return rows[0];
   },
+  updateFcmToken: async (id_user, fcmToken) => {
+    const query = "UPDATE user SET fcm_token = ? WHERE id_user = ?";
+    const [result] = await db.execute(query, [fcmToken, id_user]);
+    return result.affectedRows > 0;
+  },
 };
 
 module.exports = User;
